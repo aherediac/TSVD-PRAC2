@@ -1,0 +1,354 @@
+---
+title: "practica2"
+author: "Alejandro Heredia y Pere Garcia"
+date: "9/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Pràctica 2 (35% nota final)
+
+## Presentació
+En aquesta pràctica s’elabora un cas pràctic orientat a aprendre a identificar les dades rellevants per un projecte analític i usar les eines d’integració, neteja, validació i anàlisi de les mateixes. Per fer aquesta pràctica haureu de treballar en grups de 2 persones. Haureu de lliurar un sol fitxer amb l’enllaç Github (https://github.com) on es troben les solucions incloent els noms dels components de l’equip. Podeu utilitzar la Wiki de Github per descriure el vostre equip i els diferents arxius que corresponen a la vostra entrega. Cada membre de l’equip haurà de contribuir amb el seu usuari Github. Malgrat que no es tracta del mateix enunciat, els següents exemples d’edicions anteriors us poden servir com a guia:
+● Exemple: https://github.com/Bengis/nba-gap-cleaning
+● Exemple complex (fitxer adjunt).
+Important: si escolliu un nou dataset és interessant que continga una àmplia varietat de dades numèriques i categòriques per poder fer una anàlisi més ric.
+
+## Competències
+En aquesta pràctica es desenvolupen les següents competències del Màster de Data Science:
+● Capacitat d'analitzar un problema en el nivell d'abstracció adequat a cada situació i aplicar les habilitats i coneixements adquirits per abordar-lo i resoldre'l.
+● Capacitat per aplicar les tècniques específiques de tractament de dades (integració, transformació, neteja i validació) per al seu posterior anàlisi.
+
+## Objectius
+Els objectius concrets d’aquesta pràctica són:
+● Aprendre a aplicar els coneixements adquirits i la seva capacitat de resolució de problemes en entorns nous o poc coneguts dintre de contextos més amplis o multidisciplinaris.
+● Saber identificar les dades rellevants i els tractaments necessaris (integració, neteja i validació) per dur a terme un projecte analític.
+● Aprendre a analitzar les dades adequadament per abordar la informació continguda en les dades.
+● Identificar la millor representació dels resultats per tal d’aportar conclusions sobre el problema plantejat en el procés analític.
+● Actuar amb els principis ètics i legals relacionats amb la manipulació de dades en funció de l'àmbit d'aplicació.
+● Desenvolupar les habilitats d'aprenentatge que els permetin continuar estudiant d'una manera que haurà de ser en gran manera autodirigida o autònoma.
+● Desenvolupar la capacitat de cerca, gestió i ús d'informació i recursos en l'àmbit de la ciència de dades.
+
+## Descripció de la Pràctica a realitzar
+L’objectiu d’aquesta activitat serà el tractament d’un dataset, que pot ser el creat a la pràctica 1 o bé qualsevol dataset lliure disponible a Kaggle (https://www.kaggle.com). Alguns exemples de
+dataset amb els que podeu treballar són:
+● Red Wine Quality (https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009 ).
+● Titanic: Machine Learning from Disaster (https://www.kaggle.com/c/titanic ).
+L’últim exemple correspon a una competició activa a Kaggle de manera que, opcionalment, podeu aprofitar el treball realitzat durant la pràctica per entrar en aquesta competició. Seguint les principals etapes d’un projecte analític, les diferents tasques a realitzar (i justificar) són les següents:
+
+1. Descripció del dataset. Perquè és important i quina pregunta/problema pretén respondre?
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Les preguntes a respondre, serien:
+# 1. A partir de les dades fisicoquímiques, volem aclarir si solament amb les dades de acidez, es pot classificar el ví amb la seva puntuacio
+# 2. Quina es la variable mes relacionada amb la qualitat del vi
+# 3. Poder realitar models de regressio logistica en funcio de les variables mes relacionades.
+# 
+
+# Carrega del fitjer
+wine_data  <- read.csv("winequality-red.csv", header = TRUE)
+filas=dim(wine_data)[1]
+
+# Verifiquem l'estructura del joc de dades
+str(wine_data)
+
+#Estadístiques bàsiques
+summary(wine_data)
+```
+
+2. Integració i selecció de les dades d’interès a analitzar.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# (Argumentacio que totes les dades son necesaries per a les preguntes que volem aclarir.)
+
+#wine_data <- wine_data[, -(4:11)]
+head(wine_data)
+
+```
+
+3. Neteja de les dades.
+3.1. Les dades contenen zeros o elements buits? Com gestionaries aquests casos?
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Estadístiques de valors buits
+
+colSums(is.na(wine_data))
+colSums(wine_data=="")
+
+# (Argumentacio en cas de existir valors buits, que fariem)
+
+```
+3.2. Identificació i tractament de valors extrems.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# no s'aprecia un valors extrems que determinin una distancia significativa per realitzar ninguna operacio o tractament especial segons els boxplots.
+# (No se si seria necesario meter algo mas de codigo o explicacion)
+
+par(mfrow = c(2, ncol(wine_data)/2 ))
+invisible(lapply(1:ncol(wine_data), function(i) boxplot(wine_data[, i], main = colnames(wine_data[i]))))
+
+```
+4. Anàlisi de les dades.
+4.1. Selecció dels grups de dades que es volen analitzar/comparar (planificació dels anàlisis a aplicar).
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Grups de vins dolços ( residual.sugar > 2.539 )
+wine_data.dolç <- wine_data[wine_data$residual.sugar >= 2.539 , ]
+wine_data.nodolç <- wine_data[wine_data$residual.sugar < 2.539 , ]
+
+# grups segons la seva acidez.
+wine_data.acid <- wine_data[,-(4:11)]
+head(wine_data.acid)
+
+nrow(wine_data.dolç)
+nrow(wine_data.nodolç)
+
+```
+4.2. Comprovació de la normalitat i homogeneïtat de la variància.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# En el gràfic Q-Q s'utilitza per representar els quantils, i poder representar la relació que existeix entre dos distribucions de probabilitat. cada eix es refereix a los quantils de probabilitat de distribucions de probabilitat a comparar, un els quantils teòrics, i l'altre els hipotètics. Es por apreciar que en tots els resultats no existeix una certa normalitat, ja que no seguiexen la distribucio lineal.
+
+par(mfrow=c(3, 4))
+
+qqnorm(wine_data$fixed.acidity)
+qqline(wine_data$fixed.acidity)
+
+qqnorm(wine_data$volatile.acidity)
+qqline(wine_data$volatile.acidity)
+
+qqnorm(wine_data$citric.acid)
+qqline(wine_data$citric.acid)
+
+qqnorm(wine_data$residual.sugar)
+qqline(wine_data$residual.sugar)
+
+qqnorm(wine_data$chlorides)
+qqline(wine_data$chlorides)
+
+qqnorm(wine_data$free.sulfur.dioxide)
+qqline(wine_data$free.sulfur.dioxide)
+
+qqnorm(wine_data$total.sulfur.dioxide)
+qqline(wine_data$total.sulfur.dioxide)
+
+qqnorm(wine_data$density)
+qqline(wine_data$density)
+
+qqnorm(wine_data$pH)
+qqline(wine_data$pH)
+
+qqnorm(wine_data$sulphates)
+qqline(wine_data$sulphates)
+
+qqnorm(wine_data$alcohol)
+qqline(wine_data$alcohol)
+
+wine_data_scaled <- scale(wine_data, center=TRUE, scale = TRUE)
+
+# (Aunque escalemos las variables, sigue saliendo el test este mal y los graficos Q-Q tambien descojonados)
+
+library(nortest)
+
+# (Explicamos que es sacada del ejemplo facilitado por su sencillez o algo asi?)
+alpha = 0.05
+col.names = colnames(wine_data_scaled)
+for (i in 1:ncol(wine_data_scaled)) {
+  if (i == 1) cat("Variables que no siguen una distribución normal:\n")
+  if (is.integer(wine_data_scaled[,i]) | is.numeric(wine_data_scaled[,i])) {
+    p_val = ad.test(wine_data_scaled[,i])$p.value
+    if (p_val < alpha) {
+      cat(col.names[i])
+      # Format output
+      if (i < ncol(wine_data_scaled) - 1) cat(", ")
+      if (i %% 3 == 0) cat("\n")
+    }
+  }
+}
+
+qqnorm(wine_data_scaled[,'fixed.acidity'])
+qqline(wine_data_scaled[,'fixed.acidity'])
+
+qqnorm(wine_data_scaled[,'volatile.acidity'])
+qqline(wine_data_scaled[,'volatile.acidity'])
+
+qqnorm(wine_data_scaled[,'citric.acid'])
+qqline(wine_data_scaled[,'citric.acid'])
+
+qqnorm(wine_data_scaled[,'residual.sugar'])
+qqline(wine_data_scaled[,'residual.sugar'])
+
+qqnorm(wine_data_scaled[,'chlorides'])
+qqline(wine_data_scaled[,'chlorides'])
+
+qqnorm(wine_data_scaled[,'free.sulfur.dioxide'])
+qqline(wine_data_scaled[,'free.sulfur.dioxide'])
+
+qqnorm(wine_data_scaled[,'total.sulfur.dioxide'])
+qqline(wine_data_scaled[,'total.sulfur.dioxide'])
+
+qqnorm(wine_data_scaled[,'density'])
+qqline(wine_data_scaled[,'density'])
+
+qqnorm(wine_data_scaled[,'pH'])
+qqline(wine_data_scaled[,'pH'])
+
+qqnorm(wine_data_scaled[,'sulphates'])
+qqline(wine_data_scaled[,'sulphates'])
+
+qqnorm(wine_data_scaled[,'alcohol'])
+qqline(wine_data_scaled[,'alcohol'])
+
+```
+4.3. Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# 1. A partir de les dades fisicoquímiques, volem aclarir si solament amb les dades de acidez, es pot classificar el ví amb la seva puntuacio
+
+library(ggplot2)
+library(reshape2)
+
+# Enllaços de conulta:
+# https://rpubs.com/Joaquin_AR/226291
+
+# Busquem si les variables relacionades amb la acidez del vi, es poden utilitzar per predir la qualitat
+# Tambe es pot observar que totes tres seleccions de varialbes, tenen una relacio baixa amb la qualitat del vi.
+
+correlacio <- (round(cor(x = wine_data.acid, method = "pearson"), 2))
+correlacio 
+
+#library(psych)
+#multi.hist(x = wine_data.acid, dcol = c("blue", "red"), dlty = c("dotted", "solid"), main = "")
+
+# matriu de correlacio 
+heat_map_data <- melt(correlacio)
+head(heat_map_data)
+
+# heat map 
+ggplot(data = heat_map_data, aes(x=Var1, y=Var2, fill = value)) +
+  geom_tile()
+
+
+# 2. Quina es la variable mes relacionada amb la qualitat del vi?
+
+corr_matrix <- matrix(nc = 2, nr = 0)
+colnames(corr_matrix) <- c("estimate", "p-value")
+# Calcular el coeficiente de correlación para cada variable cuantitativa
+# con respecto al campo "quality"
+for (i in 1:(ncol(wine_data) - 1)) {
+  if (is.integer(wine_data[,i]) | is.numeric(wine_data[,i])) {
+    spearman_test = cor.test(wine_data[,i],
+    wine_data[,"quality"],
+    method = "spearman")
+    corr_coef = spearman_test$estimate
+    p_val = spearman_test$p.value
+    # Add row to matrix
+    pair = matrix(ncol = 2, nrow = 1)
+    pair[1][1] = corr_coef
+    pair[2][1] = p_val
+    corr_matrix <- rbind(corr_matrix, pair)
+    rownames(corr_matrix)[nrow(corr_matrix)] <- colnames(wine_data)[i]
+  }
+}
+print(corr_matrix)
+
+# La variable mas relacionada con la calidad del vino, seria el alcohol pero con un valor de significacia no apto para relacionarlo directamente
+
+# 3. Poder realitar models de regressio logistica en funcio de les variables mes relacionades.
+
+# Regresores cuantitativos con mayor coeficiente
+# de correlación con respecto al precio
+
+alcohol = wine_data$alcohol
+volatile.acidity = wine_data$volatile.acidity
+sulphates = wine_data$sulphates
+
+
+# Regresores segun acidez
+fixed.acidity = wine_data$fixed.acidity
+volatile.acidity = wine_data$volatile.acidity
+citric.acid = wine_data$citric.acid
+
+# Resto de variables
+citric.acid = wine_data$citric.acid
+
+
+# Variable a predecir
+residual.sugar = wine_data$residual.sugar
+chlorides = wine_data$chlorides
+free.sulfur.dioxide = wine_data$free.sulfur.dioxide
+
+
+# Generación de varios modelos
+modelo1 <- lm(quality ~ alcohol, data = wine_data)
+modelo2 <- lm(quality ~ alcohol + volatile.acidity + sulphates, data = wine_data)
+modelo3 <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid, data = wine_data)
+modelo4 <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + chlorides + free.sulfur.dioxide +
+               total.sulfur.dioxide + density + pH + sulphates + alcohol, data = wine_data)
+
+# Tabla con los coeficientes de determinación de cada modelo
+tabla.coeficientes <- matrix(c(
+  1, summary(modelo1)$r.squared,
+  2, summary(modelo2)$r.squared,
+  3, summary(modelo3)$r.squared,
+  4, summary(modelo4)$r.squared),
+  ncol = 2, byrow = TRUE)
+colnames(tabla.coeficientes) <- c("Modelo", "R^2")
+tabla.coeficientes
+
+# El coeficiente de determinacion estaria en el 4o modelo, junto a todas las variables, aunque muy parecido al 2o con solamente las variables mas significantes
+
+```
+5. Representació dels resultats a partir de taules i gràfiques.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+
+```
+6. Resolució del problema. A partir dels resultats obtinguts, quines són les conclusions? Els resultats permeten respondre al problema?
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+```
+7. Codi: Cal adjuntar el codi, preferiblement en R, amb el que s’ha realitzat la neteja, anàlisi i representació de les dades. Si ho preferiu, també podeu treballar en Python.
+
+
+## Recursos
+Els següents recursos són d’utilitat per la realització de la pràctica: 
+● Calvo M., Subirats L., Pérez D. (2019). Introducción a la limpieza y análisis de los datos. Editorial UOC.
+● Megan Squire (2015). Clean Data. Packt Publishing Ltd.
+● Jiawei Han, Micheine Kamber, Jian Pei (2012). Data mining: concepts and techniques. Morgan Kaufmann.
+● Jason W. Osborne (2010). Data Cleaning Basics: Best Practices in Dealing with Extreme Scores. Newborn and Infant Nursing Reviews; 10 (1): pp. 1527-3369.
+● Peter Dalgaard (2008). Introductory statistics with R. Springer Science & Business Media.
+● Wes McKinney (2012). Python for Data Analysis. O’Reilley Media, Inc.
+● Tutorial de Github https://guides.github.com/activities/hello-world. 
+
+## Criteris de valoració
+Tots els apartat són obligatoris. La ponderació dels exercicis és la següent:
+● Els apartats 1, 2 i 6 valen 0,5 punts.
+● Els apartats 3,5 i 7 valen 2 punts.
+● L’apartat 4 val 2,5 punts.
+Es valorarà la idoneïtat de les respostes, que han de ser clares i completes. Les diferents etapes han d’estar ben justificades i acompanyades del codi corresponent. També es valorarà la síntesi i claredat, a través de l’ús de comentaris, del codi resultant, així com la qualitat de les dades finals analitzades.
+
+## Format i data de lliurament
+Durant la setmana del 13 al 17 de desembre, el grup podrà lliurar al professor un lliurament parcial opcional. Aquest lliurament parcial és molt recomanable per rebre assessorament sobre la pràctica i verificar que la direcció presa és la correcta. S'entregaran comentaris als estudiants que hagin fet el lliurament parcial però no comptarà per a la nota de la pràctica. Al lliurament parcial els estudiants hauran de lliurar per correu electrònic, al professor encarregat de l'aula, l'enllaç al repositori Github amb què hagin avançat.
+
+Pel que fa al lliurament final, es demana:
+1) Un únic document (.txt, .pdf, .docx) que contingui l'enllaç al repositori Git del projecte (apartat b) i l'enllaç al vídeo del projecte (apartat c). Aquest document es lliurarà a l'espai de Lliurament i Registre d'AC de l'aula.
+2) Un repositori Git amb les solucions de la pràctica. El dipòsit Git es crearà a Github (https://github.com/), i podrà ser un dipòsit públic o privat, a elecció del grup. Si s'utilitza un repositori privat, cal facilitar accés al professor, mitjançant el nom d'usuari que indicarà al Tauló de l'aula o per correu electrònic. El repositori no es podrà modificar passada la data de lliurament, i haurà de contenir:
+1. Una Wiki o README.md amb els noms dels components del grup i una descripció dels fitxers.
+2. Un document PDF amb les respostes a les preguntes i els noms dels components del grup. L'extensió d'aquest document no pot superar les 20 pàgines. A més, al final del document, haurà d'aparèixer la taula de contribucions següent al treball, la qual ha de signar cada integrant del grup amb les seves inicials. Les inicials representen la confirmació que l'integrant ha participat en aquest apartat. Tots els integrants han de participar a cada apartat, per la qual cosa, idealment, els apartats haurien d'estar signats per tots els integrants.
+
+1. Una carpeta amb el codi generat per analitzar les dades.
+2. El fitxer CSV amb les dades originals.
+3. El fitxer CSV amb les dades finals analitzades.
+
+c. Un breu vídeo amb la participació dels dos components del grup, on es farà una presentació del projecte, destacant els punts més rellevants. El vídeo s'haurà de compartir mitjançant un enllaç del Google Drive de la UOC o incloure’l al repositori Git. La durada d’aquest vídeo no ha de superar els 10 minuts. 
+Aquest document de lliurament final de la Pràctica 2 s'ha de lliurar a l'espai de Lliurament i Registre d'AC de l'aula abans de les 23.59 h CET del dia 4 de gener del 2022. No s'acceptaran lliuraments fora de termini.
+Si ho considerem oportú, el professor sol·licitarà als integrants del grup una entrevista remota (de manera conjunta o individual) mitjançant Google Meet, en referència a la pràctica realitzada, en un dia i hora acordats.
+
+
