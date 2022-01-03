@@ -300,101 +300,77 @@ ggplot(wine_data.quality_good, aes(x=quality, fill=as.factor(quality))) + geom_b
 
 #### 4.2. Comprovació de la normalitat i homogeneïtat de la variància.
 
-```{r echo=TRUE, message=FALSE, warning=FALSE}
+Abans de dur a terme les proves estadístiques, hem de revisar les dades per saber si tenim normalitat entre aquestes i si la variança és o no igual entre les dades a comparar. En el nostre cas, si la prova supera p-valor > 0.05 significarà que les dades (o la variable tractada), segueix una distribució normal, o en el cas contrari, no la segueix.
 
-# En el gràfic Q-Q s'utilitza per representar els quantils, i poder representar la relació que existeix entre dos distribucions de probabilitat. cada eix es refereix a los quantils de probabilitat de distribucions de probabilitat a comparar, un els quantils teòrics, i l'altre els hipotètics. Es por apreciar que en tots els resultats no existeix una certa normalitat, ja que no seguiexen la distribucio lineal.
+Per comprobar-ho, utilitzarem el test de Shapiro-Wilk per les variables que tenim dels vins:
 
-par(mfrow=c(3, 4))
+```{r}
 
+shapiro.test(wine_data$fixed_acidity)
 qqnorm(wine_data$fixed_acidity)
-qqline(wine_data$fixed_acidity)
+qqline(wine_data$fixed_acidity, col="green", lwd=2)
 
+shapiro.test(wine_data$volatile_acidity)
 qqnorm(wine_data$volatile_acidity)
-qqline(wine_data$volatile_acidity)
+qqline(wine_data$volatile_acidity, col="green", lwd=2)
 
+shapiro.test(wine_data$citric_acidity)
 qqnorm(wine_data$citric_acidity)
-qqline(wine_data$citric_acidity)
+qqline(wine_data$citric_acidity, col="orange", lwd=2)
 
+shapiro.test(wine_data$residual_sugar)
 qqnorm(wine_data$residual_sugar)
-qqline(wine_data$residual_sugar)
+qqline(wine_data$residual_sugar, col="orange", lwd=2)
 
+shapiro.test(wine_data$chlorides)
 qqnorm(wine_data$chlorides)
-qqline(wine_data$chlorides)
+qqline(wine_data$chlorides, col="green", lwd=2)
 
+shapiro.test(wine_data$free_sulfur_dioxide)
 qqnorm(wine_data$free_sulfur_dioxide)
-qqline(wine_data$free_sulfur_dioxide)
+qqline(wine_data$free_sulfur_dioxide, col="orange", lwd=2)
 
+shapiro.test(wine_data$total_sulfur_dioxide)
 qqnorm(wine_data$total_sulfur_dioxide)
-qqline(wine_data$total_sulfur_dioxide)
+qqline(wine_data$total_sulfur_dioxide, col="orange", lwd=2)
 
+shapiro.test(wine_data$density)
 qqnorm(wine_data$density)
-qqline(wine_data$density)
+qqline(wine_data$density, col="green", lwd=2)
 
+shapiro.test(wine_data$ph)
 qqnorm(wine_data$ph)
-qqline(wine_data$ph)
+qqline(wine_data$ph, col="green", lwd=2)
 
+shapiro.test(wine_data$sulphates)
 qqnorm(wine_data$sulphates)
-qqline(wine_data$sulphates)
+qqline(wine_data$sulphates, col="green", lwd=2)
 
+shapiro.test(wine_data$alcohol)
 qqnorm(wine_data$alcohol)
-qqline(wine_data$alcohol)
+qqline(wine_data$alcohol, col="green", lwd=2)
 
-wine_data_scaled <- scale(wine_data, center=TRUE, scale = TRUE)
-
-# (Aunque escalemos las variables, sigue saliendo el test este mal y los graficos Q-Q tambien descojonados)
-
-
-
-# (Explicamos que es sacada del ejemplo facilitado por su sencillez o algo asi?)
-alpha = 0.05
-col.names = colnames(wine_data_scaled)
-for (i in 1:ncol(wine_data_scaled)) {
-  if (i == 1) cat("Variables que no siguen una distribución normal:\n")
-  if (is.integer(wine_data_scaled[,i]) | is.numeric(wine_data_scaled[,i])) {
-    p_val = ad.test(wine_data_scaled[,i])$p.value
-    if (p_val < alpha) {
-      cat(col.names[i])
-      # Format output
-      if (i < ncol(wine_data_scaled) - 1) cat(", ")
-      if (i %% 3 == 0) cat("\n")
-    }
-  }
-}
-
-qqnorm(wine_data_scaled[,'fixed_acidity'])
-qqline(wine_data_scaled[,'fixed_acidity'])
-
-qqnorm(wine_data_scaled[,'volatile_acidity'])
-qqline(wine_data_scaled[,'volatile_acidity'])
-
-qqnorm(wine_data_scaled[,'citric_acidity'])
-qqline(wine_data_scaled[,'citric_acidity'])
-
-qqnorm(wine_data_scaled[,'residual_sugar'])
-qqline(wine_data_scaled[,'residual_sugar'])
-
-qqnorm(wine_data_scaled[,'chlorides'])
-qqline(wine_data_scaled[,'chlorides'])
-
-qqnorm(wine_data_scaled[,'free_sulfur_dioxide'])
-qqline(wine_data_scaled[,'free_sulfur_dioxide'])
-
-qqnorm(wine_data_scaled[,'total_sulfur_dioxide'])
-qqline(wine_data_scaled[,'total_sulfur_dioxide'])
-
-qqnorm(wine_data_scaled[,'density'])
-qqline(wine_data_scaled[,'density'])
-
-qqnorm(wine_data_scaled[,'ph'])
-qqline(wine_data_scaled[,'ph'])
-
-qqnorm(wine_data_scaled[,'sulphates'])
-qqline(wine_data_scaled[,'sulphates'])
-
-qqnorm(wine_data_scaled[,'alcohol'])
-qqline(wine_data_scaled[,'alcohol'])
+shapiro.test(wine_data$quality)
+qqnorm(wine_data$quality)
+qqline(wine_data$quality, col="red", lwd=2)
 
 ```
+
+Com podem veure amb els resultats del test de Shapiro-Wilk obtenim que cap de les variables segueix una distribució normal, però si fem un qqplot dels quantils veiem que la gran majoria dels valors, menys a la variable "quality", tendeixen a seguir una distribució normal. Aquest comportament és possible en el testing d'hipòtesis (possible cas de teorema central del límit).
+
+Com en principi a nivell de test numèric no es compleix la condició de normalitat de les mostres, a continuació farem el test de Fligner-Killeen (test no paramètric que es basa en la mitjana) per comprobar la homogeneïtat de la variança. La hipòtesis nula la definim com que les dos variances són iguals.
+
+```{r}
+
+fligner.test(quality ~ fixed_acidity, data = wine_data)
+fligner.test(quality ~ volatile_acidity, data = wine_data)
+fligner.test(quality ~ citric_acidity, data = wine_data)
+fligner.test(quality ~ ph, data = wine_data)
+
+```
+
+Com obtenim un valor superior al llinar de 0.05, podem considerar que les variables comparades són homogenies (Hem triat les referents a l'acidesa per tenir un conjunt del mateix context).
+
 
 #### 4.3. Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
 
