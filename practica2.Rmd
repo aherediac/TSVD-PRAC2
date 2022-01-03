@@ -49,6 +49,7 @@ L’últim exemple correspon a una competició activa a Kaggle de manera que, op
 library('nortest')
 library('ggplot2')
 library('reshape2')
+library('corrplot')
 # R version 4.1.2 (2021-11-01) - Bird Hippie
 ```
 
@@ -369,109 +370,124 @@ fligner.test(quality ~ ph, data = wine_data)
 
 ```
 
-Com obtenim un valor superior al llinar de 0.05, podem considerar que les variables comparades són homogenies (Hem triat les referents a l'acidesa per tenir un conjunt del mateix context).
+Com obtenim un valor superior al llindar de 0.05, podem considerar que les variables comparades són homogenies (Hem triat les referents a l'acidesa per tenir un conjunt del mateix context).
 
 
 #### 4.3. Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
 
-```{r echo=TRUE, message=FALSE, warning=FALSE}
+**Correlació**
 
-# 1. A partir de les dades fisicoquímiques, volem aclarir si solament amb les dades de acidez, es pot classificar el ví amb la seva puntuacio
+La primera prova que farem serà la de correlació amb el test de pearson per tal de obtindre resposta a la primera pregunta que ens fèiem de si l'acidesa és suficient per donar la qualitat d'un vi.
 
-library(ggplot2)
-library(reshape2)
+```{r}
 
-# Enllaços de conulta:
-# https://rpubs.com/Joaquin_AR/226291
-
-# Busquem si les variables relacionades amb la acidez del vi, es poden utilitzar per predir la qualitat
-# Tambe es pot observar que totes tres seleccions de varialbes, tenen una relacio baixa amb la qualitat del vi.
-
-correlacio <- (round(cor(x = wine_data_acid, method = "pearson"), 2))
-correlacio 
-
-#library(psych)
-#multi.hist(x = wine_data_acid, dcol = c("blue", "red"), dlty = c("dotted", "solid"), main = "")
-
-# matriu de correlacio 
-heat_map_data <- melt(correlacio)
-head(heat_map_data)
-
-# heat map 
-ggplot(data = heat_map_data, aes(x=Var1, y=Var2, fill = value)) +
-  geom_tile()
-
-
-# 2. Quina es la variable mes relacionada amb la qualitat del vi?
-
-corr_matrix <- matrix(nc = 2, nr = 0)
-colnames(corr_matrix) <- c("estimate", "p-value")
-# Calcular el coeficiente de correlación para cada variable cuantitativa
-# con respecto al campo "quality"
-for (i in 1:(ncol(wine_data) - 1)) {
-  if (is.integer(wine_data[,i]) | is.numeric(wine_data[,i])) {
-    spearman_test = cor.test(wine_data[,i],
-    wine_data[,"quality"],
-    method = "spearman")
-    corr_coef = spearman_test$estimate
-    p_val = spearman_test$p.value
-    # Add row to matrix
-    pair = matrix(ncol = 2, nrow = 1)
-    pair[1][1] = corr_coef
-    pair[2][1] = p_val
-    corr_matrix <- rbind(corr_matrix, pair)
-    rownames(corr_matrix)[nrow(corr_matrix)] <- colnames(wine_data)[i]
-  }
-}
-print(corr_matrix)
-
-# La variable mas relacionada con la calidad del vino, seria el alcohol pero con un valor de significacia no apto para relacionarlo directamente
-
-# 3. Poder realitar models de regressio logistica en funcio de les variables mes relacionades.
-
-# Regresores cuantitativos con mayor coeficiente
-# de correlación con respecto al precio
-
-alcohol = wine_data$alcohol
-volatile.acidity = wine_data$volatile_acidity
-sulphates = wine_data$sulphates
-
-
-# Regresores segun acidez
-fixed.acidity = wine_data$fixed_acidity
-volatile.acidity = wine_data$volatile_acidity
-citric.acid = wine_data$citric_acidity
-
-# Resto de variables
-citric.acid = wine_data$citric_acidity
-
-
-# Variable a predecir
-residual.sugar = wine_data$residual_sugar
-chlorides = wine_data$chlorides
-free.sulfur.dioxide = wine_data$free_sulfur_dioxide
-
-
-# Generación de varios modelos
-modelo1 <- lm(quality ~ alcohol, data = wine_data)
-modelo2 <- lm(quality ~ alcohol + volatile_acidity + sulphates, data = wine_data)
-modelo3 <- lm(quality ~ fixed_acidity + volatile_acidity + citric_acidity, data = wine_data)
-modelo4 <- lm(quality ~ fixed_acidity + volatile_acidity + citric_acidity + residual_sugar + chlorides + free_sulfur_dioxide +
-               total_sulfur_dioxide + density + ph + sulphates + alcohol, data = wine_data)
-
-# Tabla con los coeficientes de determinación de cada modelo
-tabla.coeficientes <- matrix(c(
-  1, summary(modelo1)$r.squared,
-  2, summary(modelo2)$r.squared,
-  3, summary(modelo3)$r.squared,
-  4, summary(modelo4)$r.squared),
-  ncol = 2, byrow = TRUE)
-colnames(tabla.coeficientes) <- c("Modelo", "R^2")
-tabla.coeficientes
-
-# El coeficiente de determinacion estaria en el 4o modelo, junto a todas las variables, aunque muy parecido al 2o con solamente las variables mas significantes
+cor(wine_data_acid, method = "pearson")
 
 ```
+
+Com podem veure amb el data frame que ens haviem guardat abans, no podem assegurar una correlació entre la qualitat i les variables que representen l'acidesa.
+
+Aprofitem per determinar si hi ha alguna variable que sí que estigui correlacionada amb la qualitat:
+
+```{r}
+
+(correlacio <- cor(wine_data, method = "pearson")) # Així la printem en una sola linia
+
+```
+
+Amb les dades en general, veiem que la variable "alcohol" és la que té més influència en la qualitat del vi, però no és del tot determinant, així que en general, podem afirmar que no hi ha cap variable directament correlacionada amb la qualitat.
+
+```{r}
+
+corrplot(correlacio, method = 'circle', order = 'AOE')
+
+```
+
+**Contrast d'hipòtesis**
+
+Seguint amb el alcohol, recordem que anteriorment hem fet una separació de les dades dels vins en funció de la qualitat (> 6.5). Bé, ara intentarem esbrinar si el grau d'alcohol és superior en els vins de més qualitat o pel contrari, en els de menys qualitat.
+Per fer-ho, utilitzarem un contrast d'hipòtesis on tindrem els dos conjunts de dades anteriorment descrits i farem servir la prova t de Student. Aquesta prova assumeix que les mitjanes dels dos grups són les mateixes i com tenim suficient dades per fer-ho en els dos conjunts, no caldrà utilitzar una prova no paramètrica.
+
+Assumim p-valor = 0.05 pel contrast de la hipòtesis nula.
+
+```{r}
+
+t.test(wine_data.quality_bad$alcohol, wine_data.quality_good$alcohol)
+
+```
+
+Com podem veure doncs, la prova ens demostra que la hipòtesi nula no és certa i per tant podem afirmar que els vins de major qualitat tenen un grau d'alcohol més elevat que els de menys qualitat.
+
+**Models de regressió logística**
+
+Finalment, generarem models de regressió logística en funció de les variables més relacionades per tal de poder preveure un resultat utilitzant-los.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Variables amb el coeficient de correlació més alt (les més relacionades amb la qualitat)
+alcohol = wine_data$alcohol
+sulfats = wine_data$sulphates
+acidesa_citrica = wine_data$citric_acidity
+acidesa_fixa = wine_data$fixed_acidity
+
+# Altres variables
+sucre_residual = wine_data$residual_sugar
+cloridos = wine_data$chlorides
+densidat = wine_data$density
+ph = wine_data$ph
+sense_sulfits = wine_data$free_sulfur_dioxide
+total_sulfits = wine_data$total_sulfur_dioxide
+acidesa_volatil = wine_data$volatile_acidity
+
+# Volem predir la qualitat
+qualitat = wine_data$quality
+
+# Generació dels models lineals múltiples
+model1 <- lm(qualitat ~ alcohol, data = wine_data)
+model2 <- lm(qualitat ~ alcohol + sulfats + sucre_residual, data = wine_data)
+model3 <- lm(qualitat ~ alcohol + acidesa_citrica + cloridos, data = wine_data)
+model4 <- lm(qualitat ~ sulfats + acidesa_citrica + acidesa_fixa + densidat + ph + sense_sulfits, data = wine_data)
+model5 <- lm(qualitat ~ alcohol + sulfats + acidesa_citrica + acidesa_fixa + sucre_residual + cloridos + densidat + ph + total_sulfits + acidesa_volatil, data = wine_data)
+
+# Generem un data frame per poder veure millor les dades
+modelsLinealsMultiples <- data.frame(
+  c(1,2,3,4,5),
+  c(
+    summary(model1)$r.squared,
+    summary(model2)$r.squared,
+    summary(model3)$r.squared,
+    summary(model4)$r.squared,
+    summary(model5)$r.squared
+))
+colnames(modelsLinealsMultiples)[1] = "ModelId"
+colnames(modelsLinealsMultiples)[2] = "R^2"
+
+modelsLinealsMultiples
+
+```
+
+Com podem veure, no tenim un model amb coeficient de determinació admissible. Si fem una prova utilitzant el model 5 que és el més determinant de tots:
+
+```{r}
+
+predict(model5, data.frame(
+  alcohol = 14.0,
+  sulfats = 0.39,
+  acidesa_citrica = 0.03,
+  acidesa_fixa = 5.3,
+  sucre_residual = 6.2,
+  cloridos = 0.042,
+  densidat = 0.99300,
+  ph = 3.0,
+  total_sulfits = 90,
+  acidesa_volatil = 0.25
+))
+
+```
+
+Podem extreure un resultat del model, però no és fiable.
+
+
 ### 5. Representació dels resultats a partir de taules i gràfiques.
 
 Hem aplicat ajudes visuals per entendre els resultats mitjançant taules dels data frames i gràfiques en tot moment.
@@ -482,15 +498,16 @@ Aquesta pràctica ens havia de donar informació a tres preguntes inicials:
 
 **1. Aclarir si solament amb les dades de l’acidesa, es pot classificar el vi amb la seva puntuació correctament sense gaire marge d'error.**
 
-Fent un test
+Comprobant la correlació de les variables hem pogut veure que no és possible otorgar una puntuació de qualitat únicament en funció de les variables relacionades amb l'acidesa.
 
 **2. Quina és la variable més relacionada amb la qualitat del vi.**
 
-La resposta amb la correlació de les variables
+L'alcohol és la variable més relacionada amb la qualitat del vi, no per molt, però ho és amb diferència respecte les demès variables.
+A més a més, com hem pogut veure, el contrast d'hipòtesis ens ha permès saber que els vins de major qualitat tenen una graduació d'alcohol més elevada que els de menys qualitat.
 
 **3. Poder realitzar models de regressió logística en funció de les variables mes relacionades.**
 
-Fent un test
+Finalment hem generat cinc models per tal de poder preveure la relació entre les variables i la qualitat, però cap dels cinc ens permet donar un resultat determinant.
 
 
 
